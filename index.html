@@ -15,12 +15,17 @@
         var vlSpec = {
             "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
             "data": {"url": "building_inventory.csv"},
+            "transform": [
+                {"filter": "datum['Year Acquired'] !== 0"},
+                {"filter": "datum['Year Constructed'] !== 0"},
+                {"filter": "datum['Square Footage'] !== 0"}
+            ],
             "params": [{"name": "myfirstparam", "select": "interval"}],
             "hconcat": [
                 {
                     "mark": "bar",
                     "encoding": {
-                        "x": {"field": "Year Constructed", "type": "quantitative", "bin": true},
+                        "x": {"field": "Year Constructed", "type": "quantitative", "bin": {"maxbins": 10}},
                         "y": {"aggregate": "max", "field": "Square Footage"}
                     }
                 },
