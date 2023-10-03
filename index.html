@@ -9,32 +9,78 @@
     <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.22.2/build/vega-embed.min.js" integrity="sha256-GfFZ6w7V/y3Ws9eHVsOXZ/F1ZFroThVZraOAx3HAt6s=" crossorigin="anonymous"></script>
 </head>
 <body>
-    <h1>1. Develop a visualization using vega-lite and the building inventory data.</h1>
+    <h1>Develop a visualization using vega-lite and the building inventory data.</h1>
+    <p>Figure 1 shows a scatter plot of the values of <strong>Year Constructed</strong> vs <strong>Year Acquired</strong>. The selected points will trigger figure 2 and figure 3:</p>
+    <ul>
+        <li>Figure 1: total sum of square footage up to the acquired year.</li>
+        <li>Figure 2: a scatter plot of the values of the constructed year vs the acquired year.</li>
+        <li>Figure 3: maximum square footage of each acquired year.The maximum square footage of the Figure 2 selected buildings are highlighted in blue color.</li>
+    </ul>
     <div id="viz"></div>
     <script>
         var vlSpec = {
             "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
             "data": {"url": "building_inventory.csv"},
-            "transform": [
-                {"filter": {"and": [{"field": "Year Acquired", "gt": 0}, {"field": "Year Constructed", "gt": 0}, {"field": "Square Footage", "gt": 0}]}}
-            ],
-            "params": [{"name": "myfirstparam", "select": "interval"}],
-            "hconcat": [
+            "vconcat": [
                 {
-                    "mark": "bar",
+                    "transform":[
+                        {
+                            "aggregate": [{"op": "sum", "field": "Square Footage", "as": "sum sqft"}],
+                            "groupby": ["Year Acquired"]
+                        },
+                        {
+                            "sort": [{"field": "Year Acquired"}],
+                            "window": [{"op": "sum", "field": "sum sqft", "as": "cumulative sum sqft"}],
+                            "frame": [null, 0]
+                        }
+                    ],
+                    "title": {"text": "Figure 1: Cumulative Sum of Square Footage per Year Acquired.", "orient": "bottom"},
+                    "mark": {"type": "bar", "cornerRadius": 10},
                     "encoding": {
-                        "x": {"field": "Year Constructed", "type": "quantitative", "bin": {"binned": true, "step": 10}},
-                        "y": {"aggregate": "max", "field": "Square Footage"}
+                        "x": {"field": "Year Acquired", "type": "temporal"},
+                        "y": {"field": "cumulative sum sqft", "type": "quantitative"},
+                        "tooltip": [
+                            {"field": "Year Acquired", "type": "temporal", "timeUnit": "year"},
+                            {"field": "cumulative sum sqft", "type": "quantitative"}
+                        ]
                     }
                 },
-                {
-                    "mark": "point",
-                    "encoding": {
-                        "x": {"field": "Year Constructed", "type": "quantitative"},
-                        "y": {"field": "Total Floors", "type": "quantitative"},
-                        "color": {"value": "orange", "condition": {"param": "myfirstparam"}}
+                {"hconcat": [
+                    {
+                        "title": {"text": "Figure 2: Scatter plot of Year Constructed vs Year Acquired.", "orient": "bottom"},
+                        "mark": {"type": "point", "shape": "diamond"},
+                        "params": [{"name": "selectedpoints", "select": "interval"}],
+                        "encoding": {
+                            "x": {"field": "Year Acquired", "type": "temporal"},
+                            "y": {"field": "Year Constructed", "type": "temporal"},
+                            "color": {"value": "grey", "condition": {"param": "selectedpoints"}}
+                        }
+                    },
+                    {
+                        "layer": [
+                        {
+                            "title": {"text": "Figure 3: Max of Square Footage per Year Acquired.", "orient": "bottom"},
+                            "mark": {"type": "bar", "cornerRadius": 10},
+                            "encoding": {
+                                "x": {"field": "Year Acquired", "type": "temporal"},
+                                "y": {"field": "Square Footage", "type": "quantitative", "aggregate": "max"},
+                                "color": {"value": "grey"},
+                                "tooltip": [
+                                    {"field": "Year Acquired", "type": "temporal", "timeUnit": "year"},
+                                    {"field": "Square Footage", "type": "quantitative", "aggregate": "max"}
+                                ]
+                            }
+                        },
+                        {
+                            "transform": [{"filter": {"param": "selectedpoints"}}],
+                            "mark": {"type": "bar", "cornerRadius": 10},
+                            "encoding": {
+                                "x": {"field": "Year Acquired", "type": "temporal"},
+                                "y": {"field": "Square Footage", "type": "quantitative", "aggregate": "max"}
+                            }
+                        }]
                     }
-                }
+                ]}
             ]
         }
         vegaEmbed("#viz", vlSpec)
